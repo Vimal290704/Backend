@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
 const path = require("path");
-const fetch = require("node-fetch"); // Ensure node-fetch is installed
 const app = express();
 
 const port = process.env.PORT || 3000;
