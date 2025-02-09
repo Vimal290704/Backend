@@ -3,23 +3,26 @@ const cors = require("cors");
 const crypto = require("crypto");
 const path = require("path");
 const app = express();
-
 const port = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: "*", // Open to all origins; modify as needed
+  origin: "*",
   optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "frontend")));
 
 class FatSecretAPI {
   constructor() {
-    this.consumerKey = "63117102c5df4cfdbd61040abbb1b8dd"; // Hardcoded credentials
+    this.consumerKey = "63117102c5df4cfdbd61040abbb1b8dd";
     this.consumerSecret = "05410be848e447448678bb45796bc9c0";
     this.baseUrl = "https://platform.fatsecret.com/rest/server.api";
+
+    if (!this.consumerKey || !this.consumerSecret) {
+      console.error("Error: Missing API credentials. Set CONSUMER_KEY and CONSUMER_SECRET.");
+      process.exit(1);
+    }
   }
 
   generateOAuthParams() {
@@ -55,13 +58,12 @@ class FatSecretAPI {
   async makeApiRequest(params) {
     params.oauth_signature = this.generateSignature("GET", this.baseUrl, params);
     const url = `${this.baseUrl}?${new URLSearchParams(params)}`;
-    const response = await fetch(url);
 
+    const response = await fetch(url);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`API Error: ${response.status} - ${errorText}`);
     }
-
     return await response.json();
   }
 }
@@ -76,7 +78,6 @@ app.get(
   "/api/search",
   asyncHandler(async (req, res) => {
     const { searchTerm, recipeTypes, page = 0, maxResults = 20 } = req.query;
-
     if (!searchTerm) {
       return res.status(400).json({ error: "Search term is required" });
     }
@@ -104,7 +105,6 @@ app.get(
   "/api/recipe/:id",
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-
     if (!id) {
       return res.status(400).json({ error: "Recipe ID is required" });
     }
@@ -125,7 +125,6 @@ app.get(
   "/api/food/:id",
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-
     if (!id) {
       return res.status(400).json({ error: "Food ID is required" });
     }
@@ -147,15 +146,17 @@ app.get("/api/placeholder/:width/:height", (req, res) => {
   res.redirect(`https://via.placeholder.com/${width}x${height}`);
 });
 
-// Global error handler
+// Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error("Error:", err);
   res.status(500).json({
     error: "Server error",
     message: err.message,
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
 
+// Start Server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
